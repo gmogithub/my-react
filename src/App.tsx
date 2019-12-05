@@ -1,26 +1,26 @@
 import React from 'react';
-import logo from './logo.svg';
 import './App.css';
+import {render} from "./lib/SkyJs";
+import SkyJs from "./lib/SkyJs";
+// const App: React.FC = () => {
+//   return (
+//     null
+//   );
+// }
 
-const App: React.FC = () => {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
-}
+// export default App;
+/** @jsx SkyJs.createElement */
+const element = <div>
+  <h1>Bienvenue sur le site</h1>
+  <a href={"#"}>link</a>
+</div>;
+render(element, document.getElementById("root"));
 
-export default App;
+setTimeout(() => {
+  const el = <div>
+    {/*<h1>Bienvenue sur le site</h1>*/}
+    <a href={"#"}>link</a>
+  </div>;
+  render(el, document.getElementById("root"));
+
+}, 2000);
