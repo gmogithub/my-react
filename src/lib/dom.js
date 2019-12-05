@@ -1,26 +1,11 @@
-export function createDom(fiber) {
-  const dom = fiber.type === "TEXT_ELEMENT" ? document.createTextNode(fiber.props.nodeValue) : document.createElement(fiber.type);
-  Object.keys(fiber.props).forEach((propName) => {
-    if (propName !== "children") {
-      if (dom instanceof HTMLElement) {
-        dom[propName] = fiber.props[propName];
-      }
-    }
-  });
-  return dom;
-}
-
 const isProperty = (key) => key !== 'children';
 const isEvent = (key) => key.startsWith('on');
 const eventName = k => k.toLowerCase().substring(2);
 
-export function createPropsEvent(dom, nextProps) {
-  Object.keys(nextProps).filter(isProperty).forEach(propName => {
-
-      if (isEvent(propName)) {
-        dom.addEventListener(eventName(propName), nextProps[propName])
-    }
-  });
+export function createDom(fiber) {
+  const dom = fiber.type === "TEXT_ELEMENT" ? document.createTextNode(fiber.props.nodeValue) : document.createElement(fiber.type);
+  updateDom(dom, {}, fiber.props);
+  return dom;
 }
 
 export function updateDom(dom, prevProps, nextProps) {

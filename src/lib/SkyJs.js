@@ -1,10 +1,29 @@
-import { createDom, createPropsEvent, updateDom } from "./dom";
+import { createDom, updateDom } from "./dom";
 import { createElement } from "./vdom";
 
 let nextUnitOfWork = null;
 let wipRoot = null;
 let currentRoot = null;
 let deletions = [];
+let hookIndex = null;
+let wipFiber = null;
+
+function useState(initialState) {
+  const oldHook = wipFiber.alternate && wipFiber.alternate.hooks && wipFiber.alternate.hooks[hookIndex];
+  const hook = {
+    state: oldHook ? oldHook.state : initialState
+  };
+
+  wipFiber.hooks.push(hook);
+
+  const setState = (state) => {
+    hook.state = state;
+    render(currentRoot.props.children[0], currentRoot.dom);
+  };
+
+  hookIndex++;
+  return [hook.state, setState];
+}
 
 function reconcileChildren(wipFiber, elements) {
   let index = 0;
@@ -58,16 +77,13 @@ function reconcileChildren(wipFiber, elements) {
 }
 
 function performUnitOfWork(fiber) {
-  if (!fiber.dom) {
-    fiber.dom = createDom(fiber);
+
+  if (fiber.type instanceof Function) {
+    console.log("=====")
+    updateFunctionComponent(fiber);
+  } else {
+    updateHostComponent(fiber);
   }
-
-  // if (fiber.parent) {
-  //   fiber.parent.dom.appendChild(fiber.dom);
-  // }
-
-  const elements = fiber.props.children;
-  reconcileChildren(fiber, elements);
   if (fiber.child) {
     return fiber.child;
   }
@@ -83,6 +99,24 @@ function performUnitOfWork(fiber) {
   return null;
 }
 
+function updateFunctionComponent(fiber) {
+  wipFiber = fiber;
+  hookIndex = 0;
+  wipFiber.hooks = [];
+  const children = [fiber.type(fiber.props)];
+  reconcileChildren(fiber, children);
+}
+
+function updateHostComponent(fiber) {
+  if (!fiber.dom) {
+    fiber.dom = createDom(fiber);
+  }
+
+  const elements = fiber.props.children;
+  reconcileChildren(fiber, elements);
+}
+
+
 function workLoop(deadline) {
   let shouldYield = false;
   while (nextUnitOfWork && !shouldYield) {
@@ -97,24 +131,37 @@ function workLoop(deadline) {
 
 requestIdleCallback(workLoop);
 
+function commitDeletion(fiber, domParent) {
+  if (fiber.dom) {
+    domParent.removeChild(fiber.dom);
+  } else {
+    commitDeletion(fiber.child, domParent);
+  }
+}
+
 function commitWork(fiber) {
   if (!fiber) {
     return;
   }
 
-  const domParent = fiber.parent.dom;
+  let domParentFiber = fiber.parent;
+  while (!domParentFiber.dom) {
+    domParentFiber = domParentFiber.parent;
+  }
 
+  const domParent = domParentFiber.dom;
   if (fiber.effectTag === 'PLACEMENT' && fiber.dom !== null) {
-    createPropsEvent(fiber.dom, fiber.props);
     domParent.appendChild(fiber.dom);
   } else if (fiber.effectTag === 'DELETION') {
-    domParent.removeChild(fiber.dom);
+    commitDeletion(fiber, domParent);
+    // domParent.removeChild(fiber.dom);
     return;
   } else if (fiber.effectTag === 'UPDATE' && fiber.dom !== null) {
     updateDom(fiber.dom, fiber.alternate.props, fiber.props);
+    domParent.appendChild(fiber.dom);
   }
-  commitWork(fiber.sibling);
   commitWork(fiber.child);
+  commitWork(fiber.sibling);
 }
 
 function commitRoot() {
@@ -139,6 +186,7 @@ export function render(element, container) {
 
 export default window.SkyJs = {
   render,
+  useState,
   createElement
 };
 
